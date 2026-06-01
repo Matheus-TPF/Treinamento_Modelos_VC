@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  yolox:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+
+    image: yolox:24.03 
+    container_name: yolox_container
+
+    ipc: host
+
+    volumes:
+    - "${DATASET_PATH}:/workspace/YOLOX/datasets"
+    - "./exps:/workspace/YOLOX/exps"
+    - "./outputs:/workspace/YOLOX/YOLOX_outputs"
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    stdin_open: true
+    tty: true
