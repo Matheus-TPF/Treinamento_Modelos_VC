@@ -1,0 +1,28 @@
+services:
+  detr:
+    build:
+      context: ./DETR
+      dockerfile: Dockerfile.detr
+    volumes:
+      - "${DATASET_PATH}:/workspace/Dataset"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  rcnn:
+    build:
+      context: ./R-CNN
+      dockerfile: Dockerfile.rcnn
+    volumes:
+      - "${DATASET_PATH}:/workspace/Dataset"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
