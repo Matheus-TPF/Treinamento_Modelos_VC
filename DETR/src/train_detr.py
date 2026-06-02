@@ -1,6 +1,7 @@
 import os
 import torch
 import cv2
+import numpy
 
 from PIL import Image
 from pycocotools.coco import COCO
@@ -74,20 +75,18 @@ class CocoDetectionDataset(Dataset):
         iscrowd = []
         category_id = []
 
-        for ann in coco_annotation:
-            boxes.append(ann['bbox'])
-            area.append(ann['area'])
-            iscrowd.append(ann['iscrowd'])
-            category_id.append(ann['category_id'])
+        annotations_list = []
+        for i in range(len(boxes)):
+            annotations_list.append({
+                "bbox": boxes[i],
+                "category_id": category_id[i],
+                "area": area[i],
+                "iscrowd": iscrowd[i]
+            })
             
         target = {
-            "image_id": torch.tensor([img_id]),
-            "annotations": {
-                "bbox": boxes,
-                "category_id": category_id,
-                "area": area,
-                "iscrowd": iscrowd
-            }
+            "image_id": img_id, 
+            "annotations": annotations_list
         }
         
         encoding = self.processor(images=image, annotations=target, return_tensors="pt")
@@ -122,34 +121,57 @@ def collate_fn(batch: list) -> dict:
     }
 
 
+def find_json_file(directory: str, pattern: str) -> str:
+    """Busca dinamicamente um arquivo JSON que combine com o padrão fornecido.
+
+    Args:
+        directory (str): Diretório base para a varredura.
+        pattern (str): Palavra-chave contida no nome do arquivo (ex: 'train').
+
+    Returns:
+        str: Caminho absoluto do arquivo encontrado.
+
+    Raises:
+        FileNotFoundError: Se nenhum arquivo corresponder aos critérios.
+    """
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".json") and pattern in file.lower():
+                return os.path.join(root, file)
+    raise FileNotFoundError(f"Nenhum arquivo JSON contendo '{pattern}' foi encontrado em {directory}")
+
 # Execução propriamente
 
 # 1. Inicializa o processador de imagem oficial
 processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
 
 # 2. Instancia os Datasets usando a sua classe customizada e caminhos corretos
-dataset_base_dir = "/workspace/Dataset/MobIA 5.4.coco"
+dataset_base_dir = "/workspace/Dataset"
+
+# 3. Busca os caminhos de treinamento e validação dinamicamente
+train_json = find_json_file(dataset_base_dir, "train")
+valid_json = find_json_file(dataset_base_dir, "valid")
 
 train_dataset = CocoDetectionDataset(
     img_folder=os.path.join(dataset_base_dir, "train"),
-    ann_file=os.path.join(dataset_base_dir, "annotations", "train_annotations.coco.json"),
+    ann_file=train_json,
     processor=processor
 )
 
 val_dataset = CocoDetectionDataset(
     img_folder=os.path.join(dataset_base_dir, "valid"),
-    ann_file=os.path.join(dataset_base_dir, "annotations", "valid_annotations.coco.json"),
+    ann_file=valid_json,
     processor=processor
 )
 
-# 3. Carrega o modelo 
+# 4. Carrega o modelo 
 model = DetrForObjectDetection.from_pretrained(
     "facebook/detr-resnet-50",
     num_labels=6,
     ignore_mismatched_sizes=True
 )
 
-# 4. Configuração de hiperparâmetros
+# 5. Configuração de hiperparâmetros
 training_args = TrainingArguments(
     output_dir="/workspace/outputs",
     per_device_train_batch_size=4,
@@ -157,10 +179,12 @@ training_args = TrainingArguments(
     fp16=True,
     logging_steps=10,
     save_steps=100,
-    remove_unused_columns=False
+    remove_unused_columns=False,
+    dataloader_num_workers=0,     
+    dataloader_pin_memory=False    
 )
 
-# 5. Configura o Trainer da Hugging Face injetando seus componentes estruturados
+# 6. Configura o Trainer da Hugging Face injetando seus componentes estruturados
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -169,5 +193,5 @@ trainer = Trainer(
     data_collator=collate_fn
 )
 
-# 6. Começa o treinamento
+# 7. Começa o treinamento
 trainer.train()
