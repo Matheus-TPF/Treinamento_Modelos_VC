@@ -15,6 +15,9 @@ services:
     - "${DATASET_PATH}:/workspace/YOLOX/datasets"
     - "./exps:/workspace/YOLOX/exps"
     - "./outputs:/workspace/YOLOX/YOLOX_outputs"
+    environment:
+      - PYTHONPATH=/workspace/YOLOX
+    command: python tools/train.py -f exps/yolox_config.py -b 16 --devices 0
     
     deploy:
       resources:
