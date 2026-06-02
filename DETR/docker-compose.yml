@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  yolox:
+    build: 
+      context: .
+      dockerfile: Dockerfile.detr
+
+    image: detr:1.0
+    container_name: detr_container
+
+    ipc: host
+
+    volumes:
+    - "${DATASET_PATH}:/workspace/YOLOX/datasets"
+    - "./src:/workspace/src"
+    - "./outputs_detr:/workspace/outputs"
+    
+    command: python src/train_detr.py
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    stdin_open: true
+    tty: true

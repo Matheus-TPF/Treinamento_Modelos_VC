@@ -52,8 +52,15 @@ docker compose up
 
 #### DETR
 
+Buildar o container específico do DETR
+```bash
+docker compose build detr
+```
 
-
+Rodar o treinamento
+```bash
+docker compose up detr
+```
 
 #### R-CNN
 
