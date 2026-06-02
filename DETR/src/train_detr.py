@@ -1,14 +1,18 @@
 import os
+import torch
+import cv2
 
+from PIL import Image
+from pycocotools.coco import COCO
+from torch.utils.data import Dataset
 from transformers import DetrImageProcessor, DetrForObjectDetection, TrainingArguments, Trainer
-from datasets import load_datasets
 
 processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
 
-data_dir = "/workspace/datasets"
-dataset = load_datasets("imagefolder", data_files= {
-    "train": os.path.join(data_dir, "train_annotations.coco.json"),
-    "validation": os.path.join(data_dir, "val_annotations.coco.json")
+dataset_base_dir = "/workspace/Dataset/MobIA 5.4.coco"
+dataset = load_dataset("imagefolder", data_files= {
+    "train": os.path.join(dataset_base_dir, "annotations" ,"train_annotations.coco.json"),
+    "validation": os.path.join(dataset_base_dir, "annotations" ,"valid_annotations.coco.json")
 })
 
 model = DetrForObjectDetection.from_pretrained(

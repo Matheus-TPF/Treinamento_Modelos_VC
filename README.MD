@@ -23,41 +23,38 @@ valid_annotations.coco.json
 
 **OBS:** Essa configuração é valida tanto para YoloX quanto para DETR
 
-2. Entre na pasta e execute o docker
+2. Entre na pasta do YoloX
 
 ```bash
 cd .\YOLOX\  
 ```
 
-```bash
-docker compose run yolox
-```
-
-# Comandos Docker:
-
-Para buildar o container:
+3. Build o container
 
 ```bash
-docker compose build --no-cache
+docker compose build yolox
 ```
 
-Para rodar o treinamento:
+
+4. Executar o treinamento
 ```bash
-docker compose up
+docker compose up yolox
 ```
-
-``-f caminho_configuracao_yolox`` para usar a configuração específica do treinamento costumizado,
-``-d 1`` para usar GPU,  
-``-b 16`` para o número definir 16 imagens por lote
 
 #### DETR
 
-Buildar o container específico do DETR
+1. Entre na pasta específica do DETR
+
+```bash
+cd .\DETR\  
+```
+
+2. Buildar o container específico do DETR
 ```bash
 docker compose build detr
 ```
 
-Rodar o treinamento
+3. Rodar o treinamento
 ```bash
 docker compose up detr
 ```

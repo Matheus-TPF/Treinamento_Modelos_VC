@@ -3,10 +3,11 @@ FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYHTONPATH=/workspace
 
-RUN apt-get update && apt-get install -y git ffmeg libsm6 libxext6 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git ffmpeg libsm6 libxext6 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-RUN pip install --no-cache-dir transformers datasets timm pycocotools opencv-python-headless scikit-learn
+RUN pip install --no-cache-dir torchvision==0.16.0
+RUN pip install --no-cache-dir transformers==4.40.0 datasets timm pycocotools opencv-python-headless scikit-learn
 
 CMD [ "/bin/bash" ]

@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  yolox:
+  detr:
     build: 
       context: .
       dockerfile: Dockerfile.detr
@@ -12,7 +12,7 @@ services:
     ipc: host
 
     volumes:
-    - "${DATASET_PATH}:/workspace/YOLOX/datasets"
+    - "${DATASET_PATH}:/workspace/Dataset"
     - "./src:/workspace/src"
     - "./outputs_detr:/workspace/outputs"
     
