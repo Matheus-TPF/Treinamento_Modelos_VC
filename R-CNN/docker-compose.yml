@@ -1,23 +1,10 @@
 services:
-  detr:
-    build:
-      context: ./DETR
-      dockerfile: Dockerfile.detr
-    volumes:
-      - "${DATASET_PATH}:/workspace/Dataset"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
   rcnn:
     build:
-      context: ./R-CNN
+      context: .
       dockerfile: Dockerfile.rcnn
     volumes:
+      # O Docker Compose vai buscar o valor de DATASET_PATH no arquivo .env
       - "${DATASET_PATH}:/workspace/Dataset"
     deploy:
       resources:
