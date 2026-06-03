@@ -61,3 +61,18 @@ docker compose up detr
 
 #### R-CNN
 
+1. Entre na pasta específica do R-CNN
+
+```bash
+cd .\R-CNN\  
+```
+
+2. Buildar o container específico do R-CNN
+```bash
+docker compose build detr
+```
+
+3. Rodar o treinamento
+```bash
+docker compose up detr
+```
