@@ -1,11 +1,12 @@
 import os
 import torch
 import numpy as np
+import torchvision
+
 from PIL import Image
 from pycocotools.coco import COCO
 from torch.utils.data import Dataset, DataLoader
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection import maskrcnn_resnet50_fpn
 
 class CocoDetectionDataset(Dataset):
     def __init__(self, img_folder, ann_file):
@@ -29,14 +30,34 @@ class CocoDetectionDataset(Dataset):
 
         img = Image.open(full_path).convert("RGB")
         
-        boxes = [[b[0], b[1], b[0]+b[2], b[1]+b[3]] for b in [obj['bbox'] for obj in anns]]
-        labels = [obj['category_id'] for obj in anns]
-        
-        target = {
-            "boxes": torch.as_tensor(boxes, dtype=torch.float32),
-            "labels": torch.as_tensor(labels, dtype=torch.int64),
-            "image_id": torch.tensor([img_id])
-        }
+        boxes = []
+        labels = []
+        masks = []
+
+        for obj in anns:
+
+            boxes.append([obj["bbox"][0], obj["bbox"][1], 
+                         obj["bbox"][0] + obj['bbox'][2], 
+                         obj["bbox"][1] + obj['bbox'][3]])
+            
+            labels.append(obj['category_id'])
+
+            masks.append(self.coco.annToMask(obj))
+
+        if len(anns) == 0:
+                target = {
+                    "boxes": torch.zeros((0,4), dtype=torch.float32),
+                    "labels": torch.zeros((0,), dtype=torch.int64),
+                    "masks": torch.zeros((0, img.height, img.width), dtype=torch.uint8),
+                    "image_id": torch.tensor([img_id])
+                }
+        else:
+            target = {
+                "boxes": torch.as_tensor(boxes, dtype=torch.float32),
+                "labels": torch.as_tensor(labels, dtype=torch.int64),
+                "masks": torch.as_tensor(np.array(masks), dtype=torch.uint8),
+                "image_id": torch.tensor([img_id])
+            }
         
         img_tensor = torch.as_tensor(np.array(img), dtype=torch.float32) / 255.0
         img_tensor = img_tensor.permute(2, 0, 1) 
@@ -66,10 +87,9 @@ print(f"DEBUG: Buscando imagens em: {train_img_folder}")
 print(f"DEBUG: Buscando JSON em: {train_json}")
 
 train_ds = CocoDetectionDataset(train_img_folder, train_json)
-train_loader = DataLoader(train_ds, batch_size=2, shuffle=True, collate_fn=lambda x: tuple(zip(*x)))
+train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, collate_fn=lambda x: tuple(zip(*x)))
 device = torch.device('cuda')
-model = fasterrcnn_resnet50_fpn(pretrained=True)
-model.roi_heads.box_predictor = FastRCNNPredictor(model.roi_heads.box_predictor.cls_score.in_features, 7)
+model = torchvision.models.detection.maskrcnn_resnet50_fpn(num_classes=8, pretrained=True)
 model.to(device)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9, weight_decay=0.0005)
