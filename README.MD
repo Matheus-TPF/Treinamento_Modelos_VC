@@ -85,7 +85,7 @@ docker compose up rcnn
 cd .\M-RCNN\  
 ```
 
-2. Buildar o container específico do R-CNN
+2. Buildar o container específico do M-RCNN
 ```bash
 docker compose build mrcnn
 ```
