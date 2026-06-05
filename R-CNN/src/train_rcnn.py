@@ -9,7 +9,6 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 class CocoDetectionDataset(Dataset):
     def __init__(self, img_folder, ann_file):
-        print(f"DEBUG: Carregando imagens de: {img_folder}")
         self.coco = COCO(ann_file)
         self.ids = list(self.coco.imgs.keys())
         self.img_folder = img_folder

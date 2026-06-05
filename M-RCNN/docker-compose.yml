@@ -1,0 +1,16 @@
+services:
+  mrcnn:
+    build:
+      context: .
+      dockerfile: Dockerfile.mrcnn
+    volumes:
+      # O Docker Compose vai buscar o valor de DATASET_PATH no arquivo .env
+      - "${DATASET_PATH}:/workspace/Dataset"
+      - ./src:/workspace/src
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
