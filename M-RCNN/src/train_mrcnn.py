@@ -6,7 +6,8 @@ import torchvision
 from PIL import Image
 from pycocotools.coco import COCO
 from torch.utils.data import Dataset, DataLoader
-from torchvision.models.detection import maskrcnn_resnet50_fpn
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 class CocoDetectionDataset(Dataset):
     def __init__(self, img_folder, ann_file):
@@ -19,77 +20,44 @@ class CocoDetectionDataset(Dataset):
         ann_ids = self.coco.getAnnIds(imgIds=img_id)
         anns = self.coco.loadAnns(ann_ids)
         
-        raw_file_name = self.coco.loadImgs(img_id)[0]["file_name"]
-        clean_file_name = os.path.basename(raw_file_name)
-        
-        full_path = os.path.join(self.img_folder, clean_file_name)
-        
-        if not os.path.exists(full_path):
-            raise FileNotFoundError(f"Arquivo não encontrado em: {full_path}. "
-                                    f"Verifique se o arquivo existe dentro de {self.img_folder}")
-
+        img_info = self.coco.loadImgs(img_id)[0]
+        full_path = os.path.join(self.img_folder, os.path.basename(img_info["file_name"]))
         img = Image.open(full_path).convert("RGB")
         
-        boxes = []
-        labels = []
-        masks = []
-
+        boxes, labels, masks = [], [], []
         for obj in anns:
-
-            boxes.append([obj["bbox"][0], obj["bbox"][1], 
-                         obj["bbox"][0] + obj['bbox'][2], 
-                         obj["bbox"][1] + obj['bbox'][3]])
-            
+            if 'segmentation' not in obj or not obj['segmentation'] or obj['bbox'][2] < 1 or obj['bbox'][3] < 1:
+                continue
+            boxes.append([obj["bbox"][0], obj["bbox"][1], obj["bbox"][0]+obj['bbox'][2], obj["bbox"][1]+obj['bbox'][3]])
             labels.append(obj['category_id'])
-
             masks.append(self.coco.annToMask(obj))
 
-        if len(anns) == 0:
-                target = {
-                    "boxes": torch.zeros((0,4), dtype=torch.float32),
-                    "labels": torch.zeros((0,), dtype=torch.int64),
-                    "masks": torch.zeros((0, img.height, img.width), dtype=torch.uint8),
-                    "image_id": torch.tensor([img_id])
-                }
-        else:
-            target = {
-                "boxes": torch.as_tensor(boxes, dtype=torch.float32),
-                "labels": torch.as_tensor(labels, dtype=torch.int64),
-                "masks": torch.as_tensor(np.array(masks), dtype=torch.uint8),
-                "image_id": torch.tensor([img_id])
-            }
+        target = {
+            "boxes": torch.as_tensor(boxes, dtype=torch.float32).view(-1, 4),
+            "labels": torch.as_tensor(labels, dtype=torch.int64),
+            "masks": torch.as_tensor(np.array(masks), dtype=torch.uint8) if len(masks) > 0 else torch.zeros((0, img.height, img.width), dtype=torch.uint8),
+            "image_id": torch.tensor([img_id])
+        }
         
-        img_tensor = torch.as_tensor(np.array(img), dtype=torch.float32) / 255.0
-        img_tensor = img_tensor.permute(2, 0, 1) 
-        
+        img_tensor = torch.as_tensor(np.array(img), dtype=torch.float32).permute(2, 0, 1) / 255.0
         return img_tensor, target
 
     def __len__(self):
         return len(self.ids)
 
-def find_json_file(directory, pattern):
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".json") and pattern in file.lower():
-                return os.path.join(root, file)
-    raise FileNotFoundError(f"JSON não encontrado em {directory}")
+def collate_fn(batch):
+    return tuple(zip(*batch))
 
 # Execução
-dataset_base = "/workspace/Dataset/MobIA 5.4.coco" 
-
-# Busca o arquivo JSON dentro da pasta de anotações (ou onde ele estiver)
-train_json = find_json_file(dataset_base, "annotations") 
-
-# A pasta de imagens é a pasta 'train' que fica no mesmo nível das 'annotations'
-train_img_folder = os.path.join(dataset_base, "train")
-
-print(f"DEBUG: Buscando imagens em: {train_img_folder}")
-print(f"DEBUG: Buscando JSON em: {train_json}")
-
-train_ds = CocoDetectionDataset(train_img_folder, train_json)
-train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, collate_fn=lambda x: tuple(zip(*x)))
+dataset_base = "/workspace/Dataset"
+train_ds = CocoDetectionDataset(os.path.join(dataset_base, "train"), os.path.join(dataset_base, "annotations/train_annotations.coco.json"))
+train_loader = DataLoader(train_ds, batch_size=2, shuffle=True, collate_fn=collate_fn)
 device = torch.device('cuda')
-model = torchvision.models.detection.maskrcnn_resnet50_fpn(num_classes=8, pretrained=True)
+
+# Modelo
+model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights="DEFAULT")
+model.roi_heads.box_predictor = FastRCNNPredictor(model.roi_heads.box_predictor.cls_score.in_features, 8)
+model.roi_heads.mask_predictor = MaskRCNNPredictor(model.roi_heads.mask_predictor.conv5_mask.in_channels, 256, 8)
 model.to(device)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9, weight_decay=0.0005)
@@ -97,13 +65,12 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9, weight_d
 model.train()
 for epoch in range(10):
     for images, targets in train_loader:
-        images = [image.to(device) for image in images]
+        images = [img.to(device) for img in images]
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         
+        optimizer.zero_grad()
         loss_dict = model(images, targets)
         losses = sum(loss for loss in loss_dict.values())
-        
-        optimizer.zero_grad()
         losses.backward()
         optimizer.step()
         print(f"Loss: {losses.item()}")
