@@ -69,10 +69,28 @@ cd .\R-CNN\
 
 2. Buildar o container específico do R-CNN
 ```bash
-docker compose build detr
+docker compose build rcnn
 ```
 
 3. Rodar o treinamento
 ```bash
-docker compose up detr
+docker compose up rcnn
+```
+
+#### MASK R-CNN
+
+1. Entre na pasta específica do M-RCNN
+
+```bash
+cd .\M-RCNN\  
+```
+
+2. Buildar o container específico do R-CNN
+```bash
+docker compose build mrcnn
+```
+
+3. Rodar o treinamento
+```bash
+docker compose up mrcnn
 ```
