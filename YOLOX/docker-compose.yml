@@ -1,31 +1,26 @@
-version: '3.8'
-
 services:
   yolox:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
-
-    image: yolox:24.03 
-    container_name: yolox_container
-
-    ipc: host
-
+    image: yolox-tpf:latest
+    container_name: yolox
+    shm_size: "8gb"
+    stdin_open: true
+    tty: true
     volumes:
-    - "${DATASET_PATH}:/workspace/YOLOX/datasets"
-    - "./exps:/workspace/YOLOX/exps"
-    - "./outputs:/workspace/YOLOX/YOLOX_outputs"
-    environment:
-      - PYTHONPATH=/workspace/YOLOX
-    command: python tools/train.py -f exps/yolox_config.py -b 16 --devices 0
-    
+      - ./YOLOX/datasets:/workspace/YOLOX/datasets
+      - ./YOLOX/YOLOX_outputs:/workspace/YOLOX/YOLOX_outputs
+      - ./weights:/workspace/YOLOX/weights
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
-
-    stdin_open: true
-    tty: true
+    command: >
+      python3 tools/train.py
+      -f exps/example/custom/yolox_s_vehicles.py
+      -d 1 -b 16 --fp16 -o
+      -c weights/yolox_s.pth

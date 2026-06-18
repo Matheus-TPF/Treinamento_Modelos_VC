@@ -1,30 +1,31 @@
-version: '3.8'
-
 services:
   detr:
-    build: 
+    build:
       context: .
-      dockerfile: Dockerfile.detr
-
-    image: detr:1.0
-    container_name: detr_container
-
-    ipc: host
-
+      dockerfile: Dockerfile
+    image: detr-tpf:latest
+    container_name: detr
+    shm_size: "8gb"
+    stdin_open: true
+    tty: true
     volumes:
-    - "${DATASET_PATH}:/workspace/Dataset"
-    - "./src:/workspace/src"
-    - "./outputs_detr:/workspace/outputs"
-    
-    command: python src/train_detr.py
-    
+      - ${DATASET_PATH}:/workspace/detr/coco
+      - ./outputs:/workspace/detr/outputs
+      - ./weights:/workspace/detr/weights
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
-
-    stdin_open: true
-    tty: true
+    command: >
+      python main.py
+      --coco_path /workspace/detr/coco
+      --output_dir /workspace/detr/outputs
+      --resume weights/detr-r50_finetune.pth
+      --batch_size 2
+      --epochs 150
+      --lr_drop 100
+      --num_workers 4
+      --early_stop_patience 20

@@ -1,4 +1,19 @@
-/Dataset
-.env
-outputs/
-outputs_detr
+#images
+*.jpeg
+*.jpg
+*.png
+
+
+#pesos
+*.pth
+
+#annotations
+*.txt
+*.xml
+*.out*
+
+*.pyc
+
+#dataset yolox
+YOLOX/YOLOX/datasets/*
+YOLOX/weights

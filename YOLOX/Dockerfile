@@ -1,14 +1,34 @@
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONPATH=/workspace/YOLOX
+FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel
 
-RUN apt-get update && apt-get install -y git ffmpeg libsm6 libxext6 && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6 8.9+PTX"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        ninja-build \
+        build-essential \
+        libgl1 \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1 \
+        wget \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace/YOLOX
-RUN git clone https://github.com/Megvii-BaseDetection/YOLOX.git .
 
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir "numpy<2.0.0" opencv-python-headless
+COPY YOLOX/requirements.txt ./requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-CMD [ "/bin/bash" ]
+COPY YOLOX/ ./
+# --no-build-isolation: o setup.py importa torch para compilar a op CUDA (FastCOCOEval);
+# sem isso o pip cria um ambiente de build isolado sem torch e a compilacao falha.
+RUN pip install -v -e . --no-build-isolation
+
+VOLUME ["/workspace/YOLOX/datasets", "/workspace/YOLOX/YOLOX_outputs"]
+
+CMD ["/bin/bash"]
