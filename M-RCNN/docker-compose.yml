@@ -2,9 +2,13 @@ services:
   mrcnn:
     build:
       context: .
-      dockerfile: Dockerfile.mrcnn
+      dockerfile: Dockerfile
+    image: maskrcnn-tpf:latest
+    container_name: mrcnn
+    shm_size: "8gb"
+    stdin_open: true
+    tty: true
     volumes:
-      # O Docker Compose vai buscar o valor de DATASET_PATH no arquivo .env
       - "${DATASET_PATH}:/workspace/Dataset"
       - ./src:/workspace/src
     deploy:
@@ -12,5 +16,6 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
+    command: python src/train_mrcnn.py

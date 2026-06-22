@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir \
 
 COPY src/ /workspace/src/
 
-CMD ["python", "src/train_mrcnn.py"]
+CMD ["/bin/bash"]
