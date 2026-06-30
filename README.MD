@@ -180,18 +180,77 @@ docker compose up rcnn
 
 #### MASK R-CNN
 
-1. Entre na pasta específica do M-RCNN
+Implementação [matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN)
+(TensorFlow 1.x / Keras), em `M-RCNN/Mask_RCNN/`.
+
+> **Layout do dataset (Mask R-CNN):** mesmo formato COCO do DETR — anotações na
+> **raiz** do dataset, com `segmentation` (polígonos ou RLE), pois o Mask R-CNN
+> treina máscaras de instância:
+> ```
+> MobIA 5.4.coco
+> ├───train/            (imagens de treino)
+> ├───valid/            (imagens de validação)
+> ├───train_coco.json   (anotações de treino)
+> └───valid_coco.json   (anotações de validação)
+> ```
+
+1. Entre na pasta específica do Mask R-CNN
 
 ```bash
-cd .\M-RCNN\  
+cd M-RCNN
 ```
 
-2. Buildar o container específico do M-RCNN
+2. Configure o caminho do dataset
+
+O `docker compose` lê automaticamente um arquivo `.env`. Crie-o a partir do exemplo
+e ajuste `DATASET_PATH` para a raiz do seu dataset no host:
+
+```bash
+cp .env_example .env
+```
+
+3. Buildar o container específico do Mask R-CNN
+
+A imagem parte do container **NGC TF1** da NVIDIA (TF 1.15 com CUDA 11), necessário
+para rodar TensorFlow 1.x em GPUs Ampere+ (ex.: RTX 3060). Requer Docker +
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+
 ```bash
 docker compose build mrcnn
 ```
 
-3. Rodar o treinamento
+4. Abrir um shell interativo dentro do container
+
 ```bash
-docker compose up mrcnn
+docker compose run --rm mrcnn /bin/bash
 ```
+
+Os comandos a seguir rodam **dentro** do container (prompt em `/workspace/Mask_RCNN`).
+O dataset está montado em `/workspace/Dataset` (`DATASET_PATH` já aponta para lá),
+e o repositório é compartilhado com o host — então os pesos baixados e os
+checkpoints em `logs/` ficam salvos na sua máquina.
+
+5. Rodar o treinamento (fine-tuning a partir dos pesos de COCO)
+
+```bash
+python samples/custom/custom.py train --weights=coco \
+  --epochs 100 --patience 20 --min-delta 0.001 --batch 2
+```
+
+> Na primeira vez, `--weights=coco` baixa `mask_rcnn_coco.h5` automaticamente.
+> Use `--weights=imagenet` para treinar do zero ou `--weights=last` para continuar
+> o último treino. O número de classes é lido automaticamente do `train_coco.json`.
+
+**Early stopping:** ao fim de cada época o script mede o **mAP@0.5:0.95 de validação**
+(via pycocotools, mesma métrica do DETR/YOLOX) e para o treino se não melhorar por
+`--patience` épocas seguidas (use `0` para desativar; ajuste fino com `--min-delta`).
+O melhor modelo é salvo em `logs/<run>/best_custom.h5` — use esse na
+avaliação/inferência.
+
+O schedule (épocas, learning rate, camadas treinadas via `--layers heads|all|3+|4+|5+`)
+e a configuração (`NUM_CLASSES`, `IMAGES_PER_GPU`, `STEPS_PER_EPOCH`) ficam em
+`samples/custom/custom.py`. Reduza `IMAGES_PER_GPU` para 1 se faltar memória de GPU.
+Os checkpoints ficam em `M-RCNN/Mask_RCNN/logs/` (no host).
+
+> **Alternativa sem shell interativo:** `docker compose up mrcnn` roda direto o
+> comando de treino já configurado no `docker-compose.yml` (com `--weights=coco`).

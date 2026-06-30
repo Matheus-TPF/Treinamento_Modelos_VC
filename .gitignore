@@ -17,3 +17,5 @@
 #dataset yolox
 YOLOX/YOLOX/datasets/*
 YOLOX/weights
+
+*.h5

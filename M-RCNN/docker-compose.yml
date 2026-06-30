@@ -8,9 +8,11 @@ services:
     shm_size: "8gb"
     stdin_open: true
     tty: true
+    environment:
+      - DATASET_PATH=/workspace/Dataset
     volumes:
-      - "${DATASET_PATH}:/workspace/Dataset"
-      - ./src:/workspace/src
+      - "${DATASET_PATH}:/workspace/Dataset:ro"
+      - "./Mask_RCNN:/workspace/Mask_RCNN"
     deploy:
       resources:
         reservations:
@@ -18,4 +20,4 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    command: python src/train_mrcnn.py
+    command: python samples/custom/custom.py train --weights=coco

@@ -40,14 +40,14 @@ class Exp(MyExp):
 
         # early stopping: para o treino apos N avaliacoes sem melhora do AP50:95 de val.
         # Com eval_interval=1, N equivale a epocas. 0 desativa.
-        self.early_stop_patience = 20
+        self.early_stop_patience = 30
         self.early_stop_min_delta = 0.0  # ganho minimo de AP para contar como melhora
 
         self.multiscale_range = 5     # variação de escala multi-resolução: input_size +/- 5*32 px por iteração
         self.mosaic_prob = 1.0        # probabilidade de aplicar augmentation Mosaic (junta 4 imagens); 1.0 = sempre
         self.mixup_prob = 1.0         # probabilidade de aplicar MixUp (sobrepõe 2 imagens); 1.0 = sempre
         self.hsv_prob = 1.0           # probabilidade de aplicar jitter de cor HSV (matiz/saturação/brilho)
-        self.flip_prob = 0.5          # probabilidade de espelhar a imagem horizontalmente
+        self.flip_prob = 0.0          # probabilidade de espelhar a imagem horizontalmente
         self.degrees = 10.0           # rotação aleatória máxima (graus) na augmentation afim
         self.translate = 0.1          # translação aleatória máxima (fração da imagem) na augmentation afim
         self.mosaic_scale = (0.1, 2.0)  # faixa de zoom aplicada às imagens do Mosaic (min, max)

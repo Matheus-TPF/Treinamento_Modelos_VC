@@ -1,20 +1,22 @@
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+FROM nvcr.io/nvidia/tensorflow:22.12-tf1-py3
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/workspace/Mask_RCNN
 
-WORKDIR /workspace
+WORKDIR /workspace/Mask_RCNN
 
-RUN apt-get update && apt-get install -y \
-    python3-pip python3-dev git ffmpeg libsm6 libxext6 libgl1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/python3 /usr/bin/python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ffmpeg libsm6 libxext6 libgl1 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu118
 RUN pip install --no-cache-dir \
-    "numpy<2.0.0" \
-    pycocotools opencv-python-headless scikit-learn pillow
+    "keras==2.1.6" \
+    "h5py<3.0.0" \
+    "numpy<1.24" \
+    scipy Pillow cython matplotlib scikit-image \
+    opencv-python-headless imgaug pycocotools
 
-COPY src/ /workspace/src/
+COPY Mask_RCNN/ /workspace/Mask_RCNN/
 
 CMD ["/bin/bash"]

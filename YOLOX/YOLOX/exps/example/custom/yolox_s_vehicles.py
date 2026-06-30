@@ -40,7 +40,7 @@ class Exp(MyExp):
 
         # early stopping: para o treino apos N avaliacoes sem melhora do AP50:95 de val.
         # Com eval_interval=1, N equivale a epocas. 0 desativa.
-        self.early_stop_patience = 2
+        self.early_stop_patience = 30
         self.early_stop_min_delta = 0.0  # ganho minimo de AP para contar como melhora
 
         # input/test size (multiplos de 32)
